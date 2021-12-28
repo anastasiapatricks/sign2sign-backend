@@ -5,8 +5,8 @@ const app = express();
 const MongoClient = require('mongodb').MongoClient;
 const ObjectID = require('mongodb').ObjectId;
 
-app.listen(3000, function() {
-    console.log('listening on 3000');
+app.listen(8080, function() {
+    console.log('listening on 8080');
 })
 
 MongoClient.connect(process.env.DB_CONNECTION_STRING)
@@ -213,15 +213,11 @@ MongoClient.connect(process.env.DB_CONNECTION_STRING)
             { projection:
                 { 
                     _id: 0, 
-                    vocabularies: {
-                        title: 1,
-                        desc: 1,
-                        img: 1
-                    },
-                    conversations: {
-                        title: 1,
-                        img: 1
-                    } 
+                    "vocabularies.title": 1,
+                    "vocabularies.desc": 1,
+                    "vocabularies.img": 1,
+                    "conversations.title": 1,
+                    "conversations.img": 1
                 }
             }
         )
