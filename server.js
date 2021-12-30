@@ -9,6 +9,13 @@ app.listen(8080, function() {
     console.log('listening on 8080');
 })
 
+app.use("/login", (req, res) => {
+    res.send({
+        token: "test123",
+    });
+});
+
+
 MongoClient.connect(process.env.DB_CONNECTION_STRING)
   .then(client => {
     const db = client.db('Sign2Sign');
