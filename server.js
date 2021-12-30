@@ -24,7 +24,7 @@ MongoClient.connect(process.env.DB_CONNECTION_STRING)
     const lessonCollection = db.collection('Lesson');
 
     // Get user by userId
-    app.get('/user/:userId', (req, res) => {
+    app.get('/users/:userId', (req, res) => {
         userCollection.findOne( { _id: new ObjectID(req.params['userId']) } )
             .then(result => { res.send(result) })
             .catch(error => console.error(error));
@@ -241,5 +241,4 @@ MongoClient.connect(process.env.DB_CONNECTION_STRING)
 
   })
   .catch(console.error)
-
 
