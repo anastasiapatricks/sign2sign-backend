@@ -1,20 +1,33 @@
 require('dotenv').config();
 
 const express = require('express');
-const app = express();
-const MongoClient = require('mongodb').MongoClient;
-const ObjectID = require('mongodb').ObjectId;
+const http = require('http');
+const cors = require('cors');
+const { MongoClient, ObjectId } = require('mongodb');
 
-app.listen(8080, function() {
+const WebSocket = require('ws');
+const { signRecogntionController } = require('./signRecognition');
+
+
+const app = express();
+const server = http.createServer(app);
+
+server.listen(8080, function() {
     console.log('listening on 8080');
-})
+});
+
+const wss = new WebSocket.Server({ server: server, path: "/signRecognition" });
+wss.on('connection', signRecogntionController);
+
+app.use(cors({
+    origin: '*'
+}));
 
 app.use("/login", (req, res) => {
     res.send({
         token: "test123",
     });
 });
-
 
 MongoClient.connect(process.env.DB_CONNECTION_STRING)
   .then(client => {
@@ -25,14 +38,14 @@ MongoClient.connect(process.env.DB_CONNECTION_STRING)
 
     // Get user by userId
     app.get('/users/:userId', (req, res) => {
-        userCollection.findOne( { _id: new ObjectID(req.params['userId']) } )
+        userCollection.findOne( { _id: new ObjectId(req.params['userId']) } )
             .then(result => { res.send(result) })
             .catch(error => console.error(error));
         })
 
     // Get progress from user
     app.get('/progress', async (req, res) => {
-        const user = await userCollection.findOne({ _id: new ObjectID('61b1cb9f81c41c229c1a99d9') });
+        const user = await userCollection.findOne({ _id: new ObjectId('61b1cb9f81c41c229c1a99d9') });
         const progress = user.progress;
 
         const lesson = await lessonCollection.findOne(
