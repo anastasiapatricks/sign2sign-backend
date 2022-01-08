@@ -40,7 +40,12 @@ const signRecogntionController = (ws, req) => {
             (async () => {
                 try {
                     const frames = captureInfo.frames.slice(-NUM_FRAMES);
-                    const prediction = await predictFrames(frames);
+
+                    const prediction = {};
+                    (await predictFrames(frames)).forEach((val, i) => {
+                        const label = config.signRecognition.PREDICTION_LABELS[i];
+                        prediction[label] = val;
+                    });
 
                     ws.send(JSON.stringify(prediction));
 

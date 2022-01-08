@@ -7,6 +7,7 @@ const { MongoClient, ObjectId } = require('mongodb');
 
 const WebSocket = require('ws');
 const { signRecogntionController } = require('./signRecognition');
+const { consumers } = require('stream');
 
 
 const app = express();
@@ -58,7 +59,7 @@ MongoClient.connect(process.env.DB_CONNECTION_STRING)
             {
                 "$match": { 
                     "lessonId": progress.vocabulary.lessonId,
-                    "vocabularies.vocabIndex": progress.vocabulary.vocabularyIndex
+                    "vocabularies.vocabIndex": progress.vocabulary.vocabIndex
                 }
             },
             {
@@ -71,7 +72,7 @@ MongoClient.connect(process.env.DB_CONNECTION_STRING)
                 }
             }
         ]).toArray()
-
+        
         const vocabInfo = vocab[0]['vocabularies']
 
         const convo = await lessonCollection.aggregate([
@@ -79,7 +80,7 @@ MongoClient.connect(process.env.DB_CONNECTION_STRING)
             {
                 "$match": { 
                     "lessonId": progress.conversation.lessonId,
-                    "conversations.convoIndex": progress.conversation.conversationIndex
+                    "conversations.convoIndex": progress.conversation.convoIndex
                 }
             },
             {
