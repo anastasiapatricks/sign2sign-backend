@@ -3,11 +3,13 @@ require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
+const fs = require('fs/promises')
 const { MongoClient, ObjectId } = require('mongodb');
 
 const WebSocket = require('ws');
 const { signRecogntionController } = require('./signRecognition');
 const { consumers } = require('stream');
+const path = require('path');
 
 
 const app = express();
@@ -246,12 +248,39 @@ MongoClient.connect(process.env.DB_CONNECTION_STRING)
         .catch(error => console.error(error))
     })
 
-    // Get landmarks based on word
-    app.get('/words/:key', (req, res) => {
-        wordCollection.find( { key: req.params['key'] } ).toArray()
-        .then(result => { res.send(result[0]); })
-        .catch(error => console.error(error))
+    // Get word
+    app.get('/words/:key', async (req, res) => {
+        const word = await wordCollection.findOne({ key: req.params['key'] });
+        if (!word) {
+            res.status(404).send()
+            return
+        }
+    
+        res.send(word)
     })
+
+    // Get landmarks based on word
+    app.get('/tracks/:key', async (req, res) => {
+        try {
+            const key = req.params['key'].replace(/[^_A-Za-z]/g, '');
+
+            const wordPath = path.join('track', key);
+            const files = await fs.readdir(wordPath);
+            
+            const trackFileName = files.find(f => path.extname(f) == '.json');
+            if (!trackFileName) {
+                throw 'track file not found'
+            }
+    
+            const trackFile = await fs.readFile(path.join(wordPath, trackFileName), {encoding: "utf-8"});
+            const trackData = JSON.parse(trackFile);
+    
+            res.send({ track: trackData });
+
+        } catch {
+            res.status(404).send()
+        }
+    });
 
   })
   .catch(console.error)

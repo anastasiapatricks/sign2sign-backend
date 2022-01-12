@@ -11,15 +11,7 @@ const captureInfoCache = new NodeCache({
     useClones: false
 });
 
-const predictFrames = async (frames) => {
-    const res = await axios.post(
-        config.signRecognition.MODEL_ENDPOINT,
-        { data: [frames] }
-    );
-    return res.data.result[0][0];
-}
-
-const signRecogntionController = (ws, req) => {
+const predictionController = (ws, req) => {
     ws.id = uuidv4();
 
     ws.on('message', message => {
@@ -62,6 +54,86 @@ const signRecogntionController = (ws, req) => {
     ws.on('close', () => {
         captureInfoCache.del(ws.id);
     });
+}
+
+const signRecogntionController = (ws, req) => {
+    ws.id = uuidv4();
+
+    ws.on('message', async message => {
+        const cc = captureInfoCache.get(ws.id) || {
+            frames: [],
+            predictions: [],
+            lastPredictedFrame: 0,
+            lastResult: null
+        };
+
+        await (async () => {
+            const frame = JSON.parse(message);
+            cc.frames.push(frame);
+    
+            const n = cc.frames.length;
+            const { NUM_FRAMES, PREDICTION_INTERVAL } = config.signRecognition;
+            if (n < NUM_FRAMES || n - cc.lastPredictedFrame < PREDICTION_INTERVAL) {
+                return;
+            }
+    
+            const { NUM_CONSECUTIVE_PREDICTIONS, MIN_PREDICTION_CONFIDENCE } = config.signRecognition;
+            try {
+                const frames = cc.frames.slice(-NUM_FRAMES);
+                const predictionArray = await predictFrames(frames);
+    
+                const prediction = argMax(predictionArray);
+                const confidence = predictionArray[prediction];
+
+                cc.predictions.push(prediction);
+                cc.lastPredictedFrame = n;
+    
+                const prev = cc.predictions.slice(-NUM_CONSECUTIVE_PREDICTIONS);
+                if (prev.length < NUM_CONSECUTIVE_PREDICTIONS || prev.some(val => val != prediction)) {
+                    return;
+                }
+
+                if (prediction == cc.lastResult || confidence < MIN_PREDICTION_CONFIDENCE) {
+                    return;
+                }
+                
+                cc.lastResult = prediction;
+                ws.send(config.signRecognition.PREDICTION_LABELS[prediction]);
+    
+            } catch (error) {
+                // console.log(error)
+                // console.log(error.response);
+            }
+        })()
+
+        captureInfoCache.set(ws.id, cc);
+    });
+
+    ws.on('close', () => {
+        captureInfoCache.del(ws.id);
+    });
+}
+
+const predictFrames = async (frames) => {
+    const res = await axios.post(
+        config.signRecognition.MODEL_ENDPOINT,
+        { data: [frames] }
+    );
+    return res.data.result[0][0];
+}
+
+const argMax = (arr) => {
+    var max = arr[0];
+    var maxIndex = 0;
+
+    for (let i = 1; i < arr.length; i++) {
+        if (arr[i] > max) {
+            maxIndex = i;
+            max = arr[i];
+        }
+    }
+
+    return maxIndex;
 }
 
 module.exports = {
