@@ -8,7 +8,6 @@ const { MongoClient, ObjectId } = require('mongodb');
 
 const WebSocket = require('ws');
 const { signRecogntionController } = require('./signRecognition');
-const { consumers } = require('stream');
 const path = require('path');
 
 
@@ -279,6 +278,23 @@ MongoClient.connect(process.env.DB_CONNECTION_STRING)
 
         } catch {
             res.status(404).send()
+        }
+    });
+
+    app.get('/animations/:key', async (req, res) => {
+        try {
+            const key = req.params['key'].replace(/[^_A-Za-z0-9]/g, '');
+
+            const animationFile = await fs.readFile(path.join('animations', `${key}.json`), {encoding: "utf-8"});
+            const animationData = JSON.parse(animationFile);
+
+            res.send(animationData);
+        } catch {
+            const animationFile = await fs.readFile(path.join('animations', 'test_wave.json'), {encoding: "utf-8"});
+            const animationData = JSON.parse(animationFile);
+
+            res.send(animationData)
+            // res.status(404).send()
         }
     });
 
