@@ -285,12 +285,12 @@ MongoClient.connect(process.env.DB_CONNECTION_STRING)
         try {
             const key = req.params['key'].replace(/[^_A-Za-z0-9]/g, '');
 
-            const animationFile = await fs.readFile(path.join('animations', `${key}.json`), {encoding: "utf-8"});
+            const animationFile = await fs.readFile(path.join('animations', `${key}.json`));
             const animationData = JSON.parse(animationFile);
 
             res.send(animationData);
         } catch {
-            const animationFile = await fs.readFile(path.join('animations', 'test_wave.json'), {encoding: "utf-8"});
+            const animationFile = await fs.readFile(path.join('animations', 'placeholder.json'));
             const animationData = JSON.parse(animationFile);
 
             res.send(animationData)
@@ -298,6 +298,18 @@ MongoClient.connect(process.env.DB_CONNECTION_STRING)
         }
     });
 
+    app.get('/emotions/:key', async (req, res) => {
+        try {
+            const key = req.params['key'].replace(/[^_A-Za-z0-9]/g, '');
+
+            const expFile = await fs.readFile(path.join('animations', 'emotions', `${key}.json`));
+            const expData = JSON.parse(expFile);
+
+            res.send(expData);
+        } catch {
+            res.status(404).send();
+        }
+    })
   })
   .catch(console.error)
 
