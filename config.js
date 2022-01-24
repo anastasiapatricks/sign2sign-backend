@@ -4,7 +4,7 @@ const config = {
         CAPTURE_INFO_TTL: 60,
         CAPTURE_INFO_CHECK: 30,
         NUM_FRAMES: 32,
-        PREDICTION_INTERVAL: 8,
+        PREDICTION_INTERVAL: 1,
         PREDICTION_LABELS: [
             'BUY',
             'DO',
