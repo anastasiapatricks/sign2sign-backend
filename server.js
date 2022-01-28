@@ -14,7 +14,8 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 
-server.listen(8080, function() {
+const listenPort = process.env.PORT || 8080;
+server.listen(listenPort, function() {
     console.log('listening on 8080');
 });
 
