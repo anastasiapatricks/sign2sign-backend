@@ -234,7 +234,8 @@ MongoClient.connect(process.env.DB_CONNECTION_STRING)
             { lessonId: parseInt(req.params['lessonId']) },
             { projection:
                 { 
-                    _id: 0, 
+                    _id: 0,
+                    "title": 1,
                     "vocabularies.title": 1,
                     "vocabularies.desc": 1,
                     "vocabularies.img": 1,
