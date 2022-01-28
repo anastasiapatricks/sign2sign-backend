@@ -69,7 +69,7 @@ const signRecogntionController = (ws, req) => {
 
         await (async () => {
             const frame = JSON.parse(message);
-            cc.frames.push(frame);
+            cc.frames = pushFrame(cc.frames, frame);
     
             const n = cc.frames.length;
             const { NUM_FRAMES, PREDICTION_INTERVAL } = config.signRecognition;
@@ -80,7 +80,7 @@ const signRecogntionController = (ws, req) => {
             const { NUM_CONSECUTIVE_PREDICTIONS, MIN_PREDICTION_CONFIDENCE } = config.signRecognition;
             try {
                 const frames = cc.frames.slice(-NUM_FRAMES);
-                const predictionArray = await predictFrames(frames);
+                const predictionArray = await predictFrames(frames.map(f => f.data));
     
                 const prediction = argMax(predictionArray);
                 const confidence = predictionArray[prediction];
@@ -134,6 +134,21 @@ const argMax = (arr) => {
     }
 
     return maxIndex;
+}
+
+const pushFrame = (frames, frame) => {
+    if (frames.length == 0) {
+        return [frame]
+    }
+
+    const lastFrame = frames.at(-1);
+    const millisDiff = frame.time - lastFrame.time;
+    const numDuplicate = Math.max(Math.floor(millisDiff * 30 / 1000) - 2, 0);
+    return [
+        ...frames,
+        ...Array(numDuplicate).fill(lastFrame),
+        frame
+    ]
 }
 
 module.exports = {
