@@ -141,7 +141,7 @@ const pushFrame = (frames, frame) => {
         return [frame]
     }
 
-    const lastFrame = frames.at(-1);
+    const lastFrame = frames[frames.length - 1];
     const millisDiff = frame.time - lastFrame.time;
     const numDuplicate = Math.max(Math.floor(millisDiff * 30 / 1000) - 2, 0);
     return [
