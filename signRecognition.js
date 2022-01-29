@@ -171,12 +171,12 @@ const pushFrame = (frames, frame) => {
             }
         });
         
-        const tweenDataDiff = subDivArray(startTween, endTween, numTween);
-        const tweenTimeDiff = (frame.time - lastFrame.time) / numTween;
+        const tweenDataDiff = subDivArray(startTween, endTween, numTween + 1);
+        const tweenTimeDiff = (frame.time - lastFrame.time) / (numTween + 1);
     
         tween = Array.from({length: numTween}, (_, i) => ({
-            time: parseInt(lastFrame.time + i * tweenTimeDiff),
-            data: addMultArray(lastFrame.data, tweenDataDiff, i)
+            time: parseInt(lastFrame.time + (i+1) * tweenTimeDiff),
+            data: addMultArray(startTween, tweenDataDiff, i+1)
         }));
     }
 
