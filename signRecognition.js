@@ -62,31 +62,35 @@ const signRecogntionController = (ws, req) => {
     ws.on('message', async message => {
         const cc = captureInfoCache.get(ws.id) || {
             frames: [],
+            offset: 0,
             predictions: [],
             lastPredictedFrame: 0,
             lastResult: null
         };
 
         await (async () => {
+            const { NUM_FRAMES, PREDICTION_INTERVAL } = config.signRecognition;
+
             const frame = JSON.parse(message);
             cc.frames = pushFrame(cc.frames, frame);
-    
-            const n = cc.frames.length;
-            const { NUM_FRAMES, PREDICTION_INTERVAL } = config.signRecognition;
-            if (n < NUM_FRAMES || n - cc.lastPredictedFrame < PREDICTION_INTERVAL) {
-                return;
-            }
+
+            if (cc.frames.length < NUM_FRAMES) return;
+
+            // remove old frames
+            cc.offset += cc.frames.length - NUM_FRAMES;
+            cc.frames = cc.frames.slice(-NUM_FRAMES);
+            
+            const currentFrame = cc.offset + cc.frames.length;
+            if (currentFrame - cc.lastPredictedFrame < PREDICTION_INTERVAL) return;
     
             const { NUM_CONSECUTIVE_PREDICTIONS, MIN_PREDICTION_CONFIDENCE } = config.signRecognition;
             try {
-                const frames = cc.frames.slice(-NUM_FRAMES);
-                const predictionArray = await predictFrames(frames.map(f => f.data));
-    
+                const predictionArray = await predictFrames(cc.frames.map(f => f.data));
                 const prediction = argMax(predictionArray);
                 const confidence = predictionArray[prediction];
 
                 cc.predictions.push(prediction);
-                cc.lastPredictedFrame = n;
+                cc.lastPredictedFrame = currentFrame;
     
                 const prev = cc.predictions.slice(-NUM_CONSECUTIVE_PREDICTIONS);
                 if (prev.length < NUM_CONSECUTIVE_PREDICTIONS || prev.some(val => val != prediction)) {
@@ -143,12 +147,76 @@ const pushFrame = (frames, frame) => {
 
     const lastFrame = frames[frames.length - 1];
     const millisDiff = frame.time - lastFrame.time;
-    const numDuplicate = Math.max(Math.floor(millisDiff * 30 / 1000) - 2, 0);
+
+    let tween = [];
+    const numTween = Math.max(Math.floor(millisDiff * 30 / 1000) - 1, 0);
+
+    if (numTween > 0) {
+        const lastViz = landmarksViz(lastFrame.data);
+        const viz = landmarksViz(frame.data);
+
+        const stopTweenLh = !lastViz.lh || !viz.lh;
+        const stopTweenRh = !lastViz.rh || !viz.rh;
+
+        const startTween = lastFrame.data;
+        const endTween = frame.data.map((p, i)=> {
+            if (i < 33) {
+                return p;
+            }
+            if (i < 54) {
+                return stopTweenLh ? startTween[i] : p;
+            }
+            if (i < 75) {
+                return stopTweenRh ? startTween[i] : p;
+            }
+        });
+        
+        const tweenDataDiff = subDivArray(startTween, endTween, numTween);
+        const tweenTimeDiff = (frame.time - lastFrame.time) / numTween;
+    
+        tween = Array.from({length: numTween}, (_, i) => ({
+            time: parseInt(lastFrame.time + i * tweenTimeDiff),
+            data: addMultArray(lastFrame.data, tweenDataDiff, i)
+        }));
+    }
+
     return [
         ...frames,
-        ...Array(numDuplicate).fill(lastFrame),
+        ...tween,
         frame
     ]
+}
+
+const subDivArray = (a, b, div) => {
+    const result = [];
+    for (let i = 0; i < a.length; i++) {
+        const point = [];
+        for (let j = 0; j < 2; j++) {
+            point.push((b[i][j] - a[i][j]) / div);
+        }
+        result.push(point);
+    }
+    return result;
+}
+
+const addMultArray = (a, b, mult) => {
+    const result = [];
+    for (let i = 0; i < a.length; i++) {
+        const point = [];
+        for (let j = 0; j < 2; j++) {
+            point.push(a[i][j] + mult * b[i][j]);
+        }
+        result.push(point);
+    }
+    return result;
+}
+
+const landmarksViz = (landmarks) => {
+    return {
+        pose: true,
+        lh: !landmarks.slice(33, 54).some(l => l[0] == 0 && l[1] == 0),
+        rh: !landmarks.slice(54, 75).some(l => l[0] == 0 && l[1] == 0)
+    }
 }
 
 module.exports = {
